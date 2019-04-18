@@ -1,0 +1,114 @@
+<?php
+/**
+ * Implements hook_install().
+ */
+function oan_install() {
+
+}
+
+/**
+ * Implements hook_schema().
+ */
+function oan_schema() {
+
+  $schema['oan_networks'] = array(
+    'description' => 'own advertising network.',
+    'fields' => array(
+      'oan_id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique ID network advertising.',
+      ),
+      'oan_name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Name network advertising',
+      ),
+      'oan_key' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Key network advertising',
+      ),
+      'oan_secret' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Secret network advertising',
+      ),
+      'oan_hash' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'summary hash',
+      ),
+      'oan_endpoint' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'end point url remote address',
+      ),
+      'oan_custom_data' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+        'description' => 'custom data text json network advertising',
+      ),
+    ),
+    'primary key' => array('oan_id'),
+    'indexes' => array(
+      'oan_name' => array('oan_name'),
+      'oan_hash' => array('oan_hash'),
+    ),
+  );
+
+  $schema['oan_items'] = array(
+    'description' => 'item own advertising network.',
+    'fields' => array(
+      'oan_item_id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique item ID network advertising.',
+      ),
+      'oan_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'ID network advertising',
+      ),
+      'oan_hash' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'extract hash query',
+      ),
+      'oan_item_data' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+        'description' => 'item data text json network advertising',
+      ),
+      'oan_item_fields' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+        'description' => 'item fields query text json network advertising',
+      ),
+      'oan_item_custom_data' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+        'description' => 'custom data item text json network advertising',
+      ),
+    ),
+    'primary key' => array('oan_item_id'),
+    'indexes' => array(
+      'oan_id' => array('oan_id'),
+      'oan_hash' => array('oan_hash'),
+    ),
+  );
+  return $schema;
+}

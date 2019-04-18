@@ -1,0 +1,11 @@
+name = OAN
+package = OAN
+description = own advertising network (connection to external partner programms)
+core = 7.x
+
+version = "7.x-1.0 beta"
+core = "7.x"
+project = "OAN"
+datestamp = "1555243864"
+
+files[] = oan.inc

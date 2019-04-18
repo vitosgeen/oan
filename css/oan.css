@@ -1,0 +1,32 @@
+.shutterstock_block-row {
+  height: 4vw;
+  overflow: hidden;
+  margin: 2px 0px;
+}
+.shutterstock_block-row .shutterstock_block-row-field {
+  margin: 0px -14px;
+  background-color: #eaeaea;
+}
+
+.shutterstock_block-row-field-content a {
+   height: 4vw;
+  display: table-cell;
+  vertical-align: middle;
+  line-height: 4vw;
+}
+.shutterstock_block-row-field-content > a div::after {
+  content: ".";
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  background-color: transparent;
+  z-index: 100;
+  display: block;
+  top: 0;
+  right: 0;
+  color: transparent;
+  border-bottom: 10px solid #eaeaea;
+}
+.shutterstock_block-row-field-content a div {
+  position: relative;
+}

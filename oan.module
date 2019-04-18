@@ -1,0 +1,253 @@
+<?php
+
+/**
+ * Implements hook_entity_info()
+ */
+function oan_entity_info() {
+  return array(
+    'oan_networks' => array(
+      'label' => t('oan network'),
+      'controller class' => 'OanNetworksController',
+      'base table' => 'oan_networks',
+      'uri callback' => 'oan_networks',
+      'fieldable' => FALSE,
+      'entity keys' => array(
+        'oan_id' => 'oan_id' ,
+      ),
+      'module' => 'oan',
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function oan_menu() {
+  $items['admin/config/oan'] = array(
+    'title' => 'OAN',
+    'description' => '',
+    'weight' => 0,
+    'access callback' => TRUE,
+  );
+  $items['admin/config/oan/network/add'] = array(
+    'title' => 'network add',
+    'description' => 'Configure network',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('oan_form_add'),
+    'access callback' => TRUE,
+  );
+  $items['admin/config/oan/network/list'] = array(
+    'title' => 'network list',
+    'page callback' => 'oan_network_view_list',
+    'access arguments' => array('access content'),
+    'access callback' => TRUE,
+  );
+  $items['oan-query'] = array(
+    'title' => 'OAN',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'oan_network_query',
+    'delivery callback' => 'ajax_deliver',
+    'access callback' => TRUE,
+  );
+  $items['oan-redirect'] = array(
+    'title' => 'redirect',
+    'description' => '',
+    'weight' => 0,
+    'page callback' => 'oan_network_redirect',
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+function oan_form_add (){
+  $form['oan_network_name'] = array(
+    '#name' => 'oan_network_name',
+    '#title' => t('name'),
+    '#description' => 'network name',
+    '#type' => 'textfield',
+  );
+  $form['oan_network_key'] = array(
+    '#name' => 'oan_network_key',
+    '#title' => t('network key'),
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#markup' => '<div>'.''.'</div>',
+  );
+  $form['oan_network_secret'] = array(
+    '#name' => 'oan_network_secret',
+    '#title' => t('network secret'),
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#markup' => '<div>'.''.'</div>',
+  );
+  $form['oan_endpoint'] = array(
+    '#name' => 'oan_endpoint',
+    '#title' => t(' oan endpoint '),
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#markup' => '<div>'.''.'</div>',
+  );
+  $form['oan_network_custom_data'] = array(
+    '#name' => 'oan_custom_data',
+    '#description' => ' add custom data   ',
+    '#type' => 'textarea',
+    '#title' => t('oan network custom data'),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('SAVE'),
+    '#limit_validation_errors' => array(),
+    '#submit' => array('oan_save_network'),
+  );
+  return $form;
+}
+
+function oan_save_network (&$form,&$form_state){
+  $oan_network_custom_data = preg_split("[\n]",$form_state['input']['oan_custom_data']);
+  $cdata = array();
+  foreach($oan_network_custom_data as $rdata){
+    $edata = explode("|", $rdata);
+    if(isset($edata[0]) && isset($edata[1])){
+      $k = trim($edata[0]);
+      $v = trim($edata[1]);
+      $cdata[$k] = $v;
+    }
+  }
+  $n = entity_get_controller('oan_networks')->create();
+  $n->oan_name = $form_state['input']['oan_network_name'];
+  $n->oan_key = $form_state['input']['oan_network_key'];
+  $n->oan_secret = $form_state['input']['oan_network_secret'];
+  $n->oan_endpoint = $form_state['input']['oan_endpoint'];
+  $n->oan_custom_data = json_encode($cdata);
+  entity_get_controller('oan_networks')->save($n);
+}
+function oan_network_view_list (){
+  $list = entity_get_controller('oan_networks')->get_list();
+  if(!empty($list)){
+    $rows = array();
+    $rows_headers = array();
+    foreach ($list as $item) {
+      $rows[] = (array)$item;
+      if(empty($rows_headers)){
+        $rows_headers = array_keys((array)$item);
+      }
+    }
+    $output = theme('table', array('header' => $rows_headers, 'rows' => $rows));
+    return $output;
+  }
+  return true;
+}
+
+function oan_network_query() {
+  $oan_hash = $_GET["key_hash"];
+  $oan = entity_get_controller('oan_networks')->load($oan_hash);
+  $cdata = json_decode($oan->oan_custom_data);
+  $query_spare = "";
+  $query_spare2 = "";
+  $queryFields = [
+    "query" => "",
+    //"image_type" => "",
+    "orientation" => "",
+    "people_number" => 6
+  ];
+  if (!empty($_GET['query_spare'])) {
+    $query_spare = $_GET['query_spare'];
+  }
+  if (!empty($_GET['query_spare2'])) {
+    $query_spare2 = $_GET['query_spare2'];
+  }
+  foreach($cdata as $kitem=>$citem){
+    if(isset($queryFields[$kitem]) && isset($_GET[$kitem])){
+      $queryFields[$kitem] = $_GET[$kitem];
+    }
+    elseif(isset($queryFields[$kitem])){
+      unset($queryFields[$kitem]);
+    }
+  }
+  $s = microtime(TRUE);
+  $queryFields[ "per_page"] = 24;
+  $decodedResponse =  oan_network_get_curl_query($queryFields, $oan->oan_endpoint, $oan->oan_key, $oan->oan_secret);
+  error_log($queryFields['query']);
+  if(empty($decodedResponse->data) || count($decodedResponse->data) < 2){
+    $queryFields['query'] = $query_spare;
+    $decodedResponse =  oan_network_get_curl_query($queryFields, $oan->oan_endpoint, $oan->oan_key, $oan->oan_secret);
+    error_log($queryFields['query']);
+  }
+  if (empty($decodedResponse->data) || count($decodedResponse->data) < 2) {
+    $queryFields['query'] = $query_spare2;
+    $decodedResponse =  oan_network_get_curl_query($queryFields, $oan->oan_endpoint, $oan->oan_key, $oan->oan_secret);
+    error_log($queryFields['query']);
+  }
+
+  error_log( $queryFields['query']);
+  $e = microtime(TRUE);
+  $data_rows = array();
+  foreach($decodedResponse->data as $item_data){
+    $data_rows[] = array(
+      "affiliate_url"   =>$item_data->affiliate_url,
+      "affiliate_base64"=>base64_encode($item_data->affiliate_url),
+      "img_src"=>$item_data->assets->huge_thumb->url,
+    );
+  }
+
+  global $user;
+  $page_title = "";
+  if(!empty($user->uid)){
+    $page_title = $queryFields['query'];
+    //dpm($decodedResponse); die();
+  }
+  return  theme('oan_page', array('title' => $page_title, 'data_rows' => $data_rows));
+}
+
+
+function oan_network_get_curl_query($qfields, $url_external, $key, $secret){
+  $xq = $url_external . "?" . http_build_query($qfields);
+
+  $options = [
+    CURLOPT_URL => $xq,
+    CURLOPT_USERAGENT => "php/curl",
+    CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
+    CURLOPT_USERPWD => $key . ':' . $secret,
+    CURLOPT_RETURNTRANSFER => 1
+  ];
+
+  $handle = curl_init();
+  curl_setopt_array($handle, $options);
+  $response = curl_exec($handle);
+  curl_close($handle);
+  $decodedResponse = json_decode($response);
+  return $decodedResponse;
+}
+
+function oan_network_redirect(){
+  $goto_url = "/";
+  if(isset($_GET["url"])){
+    try {
+      $goto_url = base64_decode($_GET["url"]);
+      drupal_goto($goto_url);
+    } catch (Exception $e) {
+      error_log($e->getMessage());
+    }
+  }
+  return "";
+}
+
+
+/*
+    Implements hook_theme();
+ */
+function oan_theme($existing, $type, $theme, $path)
+{
+  return array(
+    'oan_page' => array(
+      'variables' => array('title' => null, 'data_rows' => null),
+      'template' => 'oan_page',
+    ),
+  );
+}
+
+function oan_init()
+{
+  drupal_add_js($_SERVER["DOCUMENT_ROOT"] . '/sites/all/modules/custom/oan/js/oan.js', 'file', array('defer' => 'defer'));
+  drupal_add_css($_SERVER["DOCUMENT_ROOT"] . '/sites/all/modules/custom/oan/css/oan.css', 'file', array('defer' => 'defer'));
+}
